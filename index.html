@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrustLoop - Seguridad Personal</title>
+
+  <!-- Meta tags PWA -->
+  <meta name="description" content="App de seguridad personal para planificar salidas y enviar alertas." />
+  <meta name="theme-color" content="#15395a" />
+
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    :root {
+      --primary-color: #15395a;
+      --secondary-color: #50E3C2;
+      --background-body: #f5f9fc;
+      --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      --transition-speed: 0.3s;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+      background: #4A90E2;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 1rem 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    main {
+      flex: 1;
+      max-width: 420px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+      background: var(--background-body);
+      border-radius: 15px;
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--primary-color);
+    }
+
+    input[type="text"], input[type="time"], input[type="tel"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 25px;
+      border: none;
+      background-color: var(--primary-color);
+      color: white;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      transition: background-color var(--transition-speed);
+    }
+
+    .footer {
+      max-width: 420px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem 0.5rem;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-radius: 0 0 15px 15px;
+      box-shadow: 0 -12px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .footer-btn {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 50%; /* Forma circular */
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background-color var(--transition-speed);
+    }
+
+    .footer-btn:hover {
+      background-color: #3bc5a7;
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 15px;
+      max-width: 350px;
+      width: 90%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1);
+    }
+
+    .contact-input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .contact-input-group input {
+      flex: 1;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<header id="header">TrustLoop - Seguridad Personal</header>
+
+<main>
+  <!-- Planificación de Salidas -->
+  <section aria-labelledby="salidas-title">
+    <h2 id="salidas-title">Planificación de Salidas</h2>
+    <label for="destinationInput">Destino (texto o dirección)</label>
+    <div style="display: flex; gap: 0.5rem;">
+      <input type="text" id="destinationInput" placeholder="Escribe tu destino o pulsa Obtener" aria-label="Destino" />
+      <button id="getLocationBtn" class="location-btn" aria-label="Obtener ubicación">📍 Obtener</button>
+    </div>
+    <label for="returnTimeInput">Hora estimada de regreso</label>
+    <input type="time" id="returnTimeInput" aria-label="Hora de regreso" />
+
+    <!-- Contacto único -->
+    <h3 id="emergencyContactsTitle">Contacto de Emergencia</h3>
+    <div class="contact-input-group">
+      <input type="text" id="contactName1" placeholder="Nombre" aria-label="Nombre del contacto" />
+      <input type="tel" id="contactPhone1" placeholder="Teléfono" aria-label="Teléfono del contacto" />
+    </div>
+
+    <div id="addedContactsList" style="margin-top: 1rem;"></div>
+    <button id="savePlanBtn" aria-label="Guardar plan">Guardar y Activar Alerta</button>
+  </section>
+
+  <!-- Botones de seguimiento -->
+  <section aria-labelledby="alertas-title">
+    <h2 id="alertas-title">Seguimiento de Alertas</h2>
+    <button id="imOkBtn" aria-label="Confirmar estado">Estoy Bien</button>
+    <button id="panicBtn" aria-label="Activar pánico">Botón de Pánico</button>
+    <button id="safeCheckToggleBtn" aria-label="Activar SafeCheck">Activar SafeCheck</button>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <button class="footer-btn" id="footerFaqBtn" aria-label="Ver preguntas frecuentes">FAQ</button>
+  <button class="footer-btn" id="footerMenuBtn" aria-label="Abrir menú">Menú</button>
+</footer>
+
+<!-- Modales -->
+<div class="modal-overlay" id="menuModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+    <h3 id="menu-title" class="menu-title">Menú Principal</h3>
+    <div class="menu-buttons">
+      <button class="menu-button" id="configBtn" aria-label="Configuración">Configuración</button>
+      <button class="menu-button" id="tutorialBtn" aria-label="Tutorial">Tutorial</button>
+      <button class="menu-button close-modal" aria-label="Cerrar menú">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="languageModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="language-title">
+    <h3 id="language-title" class="menu-title">Selecciona un Idioma</h3>
+    <div class="menu-buttons">
+      <button class="menu-button language-option" data-lang="es" aria-label="Español">Español</button>
+      <button class="menu-button language-option" data-lang="ca" aria-label="Català">Català</button>
+      <button class="menu-button language-option" data-lang="en" aria-label="English">English</button>
+      <button class="menu-button close-modal" aria-label="Cerrar modal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="faqModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="faq-title">
+    <h3 id="faq-title" class="menu-title">Preguntas Frecuentes</h3>
+    <p id="faq-content"></p>
+    <button class="menu-button close-modal" aria-label="Cerrar FAQ">Cerrar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="tutorialModal" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+    <h3 id="tutorial-title" class="menu-title">Cómo Usar TrustLoop</h3>
+    <p id="tutorial-content"></p>
+    <button class="menu-button close-modal" aria-label="Cerrar tutorial">Cerrar</button>
+  </div>
+</div>
+
+<script>
+(function () {
+
+  // Variables globales
+  let safeCheckTimeout;
+
+  // Elementos del DOM
+  const getLocationBtn = document.getElementById("getLocationBtn");
+  const destinationInput = document.getElementById("destinationInput");
+  const savePlanBtn = document.getElementById("savePlanBtn");
+  const addedContactsList = document.getElementById("addedContactsList");
+
+  const imOkBtn = document.getElementById("imOkBtn");
+  const panicBtn = document.getElementById("panicBtn");
+
+  const menuBtn = document.getElementById("footerMenuBtn");
+  const menuModal = document.getElementById("menuModal");
+  const configBtn = document.getElementById("configBtn");
+  const languageModal = document.getElementById("languageModal");
+  const savedLanguage = localStorage.getItem("language") || "es";
+
+  const emergencyContactsTitle = document.getElementById("emergencyContactsTitle");
+  const contactNameLabel = document.querySelector('label.contact-name-label');
+  const contactPhoneLabel = document.querySelector('label.contact-phone-label');
+
+  const faqModal = document.getElementById("faqModal");
+  const faqContent = document.getElementById("faq-content");
+  const footerFaqBtn = document.getElementById("footerFaqBtn");
+
+  const tutorialModal = document.getElementById("tutorialModal");
+  const tutorialContent = document.getElementById("tutorial-content");
+  const tutorialBtn = document.getElementById("tutorialBtn");
+
+  // --- FUNCIONES DE TRADUCCIÓN ---
+  function applyLanguage(lang) {
+    const translations = {
+      es: {
+        header: "TrustLoop - Seguridad Personal",
+        salidasTitle: "Planificación de Salidas",
+        destinationLabel: "Destino (texto o dirección)",
+        returnTimeLabel: "Hora estimada de regreso",
+        emergencyContactsTitle: "Contacto de Emergencia",
+        contactNameLabel: "Nombre",
+        contactPhoneLabel: "Teléfono",
+        savePlanBtn: "Guardar y Activar Alerta",
+        alertasTitle: "Seguimiento de Alertas",
+        imOkBtn: "Estoy Bien",
+        panicBtn: "Botón de Pánico",
+        safeCheckToggleBtn: "Activar SafeCheck",
+        footerFaqBtn: "FAQ",
+        footerMenuBtn: "Menú",
+        menuTitle: "Menú Principal",
+        configBtn: "Configuración",
+        tutorialBtn: "Tutorial",
+        languageTitle: "Selecciona un Idioma",
+        locationBtnText: "📍 Obtener"
+      },
+      ca: {
+        header: "TrustLoop - Seguretat Personal",
+        salidasTitle: "Planificació de Sortides",
+        destinationLabel: "Destí (text o adreça)",
+        returnTimeLabel: "Hora estimada de tornada",
+        emergencyContactsTitle: "Contacte d'Emergència",
+        contactNameLabel: "Nom",
+        contactPhoneLabel: "Telèfon",
+        savePlanBtn: "Guardar i Activar Alerta",
+        alertasTitle: "Seguiment d'Alertes",
+        imOkBtn: "Estic Bé",
+        panicBtn: "Botó de Pànic",
+        safeCheckToggleBtn: "Activar SafeCheck",
+        footerFaqBtn: "FAQ",
+        footerMenuBtn: "Menú",
+        menuTitle: "Menú Principal",
+        configBtn: "Configuració",
+        tutorialBtn: "Tutorial",
+        languageTitle: "Selecciona un Idioma",
+        locationBtnText: "📍 Obtenir"
+      },
+      en: {
+        header: "TrustLoop - Personal Security",
+        salidasTitle: "Trip Planning",
+        destinationLabel: "Destination (text or address)",
+        returnTimeLabel: "Estimated return time",
+        emergencyContactsTitle: "Emergency Contact",
+        contactNameLabel: "Name",
+        contactPhoneLabel: "Phone",
+        savePlanBtn: "Save and Activate Alert",
+        alertasTitle: "Alert Tracking",
+        imOkBtn: "I'm OK",
+        panicBtn: "Panic Button",
+        safeCheckToggleBtn: "Activate SafeCheck",
+        footerFaqBtn: "FAQ",
+        footerMenuBtn: "Menu",
+        menuTitle: "Main Menu",
+        configBtn: "Settings",
+        tutorialBtn: "Tutorial",
+        languageTitle: "Select a Language",
+        locationBtnText: "📍 Get"
+      }
+    };
+
+    const t = translations[lang];
+
+    if (document.getElementById("header")) document.getElementById("header").textContent = t.header;
+    if (document.getElementById("salidas-title")) document.getElementById("salidas-title").textContent = t.salidasTitle;
+    if (document.querySelector('label[for="destinationInput"]')) document.querySelector('label[for="destinationInput"]').textContent = t.destinationLabel;
+    if (document.querySelector('label[for="returnTimeInput"]')) document.querySelector('label[for="returnTimeInput"]').textContent = t.returnTimeLabel;
+    if (document.getElementById("emergencyContactsTitle")) document.getElementById("emergencyContactsTitle").textContent = t.emergencyContactsTitle;
+    if (document.getElementById("savePlanBtn")) document.getElementById("savePlanBtn").textContent = t.savePlanBtn;
+    if (document.getElementById("alertas-title")) document.getElementById("alertas-title").textContent = t.alertasTitle;
+    if (document.getElementById("imOkBtn")) document.getElementById("imOkBtn").textContent = t.imOkBtn;
+    if (document.getElementById("panicBtn")) document.getElementById("panicBtn").textContent = t.panicBtn;
+    if (document.getElementById("safeCheckToggleBtn")) document.getElementById("safeCheckToggleBtn").textContent = t.safeCheckToggleBtn;
+    if (document.getElementById("footerFaqBtn")) document.getElementById("footerFaqBtn").textContent = t.footerFaqBtn;
+    if (document.getElementById("footerMenuBtn")) document.getElementById("footerMenuBtn").textContent = t.footerMenuBtn;
+    if (document.getElementById("menu-title")) document.getElementById("menu-title").textContent = t.menuTitle;
+    if (document.getElementById("configBtn")) document.getElementById("configBtn").textContent = t.configBtn;
+    if (document.getElementById("tutorialBtn")) document.getElementById("tutorialBtn").textContent = t.tutorialBtn;
+    if (document.getElementById("language-title")) document.getElementById("language-title").textContent = t.languageTitle;
+    if (document.getElementById("getLocationBtn")) document.getElementById("getLocationBtn").textContent = t.locationBtnText;
+    if (document.querySelector('label.contact-name-label')) document.querySelector('label.contact-name-label').textContent = t.contactNameLabel;
+    if (document.querySelector('label.contact-phone-label')) document.querySelector('label.contact-phone-label').textContent = t.contactPhoneLabel;
+
+    updateFaqText(lang);
+    updateTutorialText(lang);
+
+    // Placeholders dinámicos
+    const contactNameInput = document.getElementById("contactName1");
+    const contactPhoneInput = document.getElementById("contactPhone1");
+    if (contactNameInput) contactNameInput.placeholder = t.contactNameLabel;
+    if (contactPhoneInput) contactPhoneInput.placeholder = t.contactPhoneLabel;
+  }
+
+  function updateFaqText(lang) {
+    const texts = {
+      es: `¿Qué es TrustLoop?\nEs una aplicación de seguridad personal.\n\n¿Cómo funciona SafeCheck?\nPrograma una hora estimada de regreso. Si no pulsas “Estoy Bien”, se avisa al contacto.\n\n¿Funciona sin internet?\nEl envío por SMS sí.`,
+      ca: `Què és TrustLoop?\nÉs una aplicació de seguretat personal per ajudar-te a planificar sortides i rebre alertes.\n\nCom funciona SafeCheck?\nS'estableix una hora estimada de tornada. Si no pulses “Estic Bé”, s'avisa al contacte.\n\nPuc usar-la sense connexió?\nL'enviament per SMS funciona sense WiFi.`,
+      en: `What is TrustLoop?\nIt's a personal security app that helps you plan trips and receive alerts.\n\nHow does SafeCheck work?\nSet an estimated return time. If you don't press 'I'm OK', your contact gets notified.\n\nCan I send messages without internet?\nSMS sending works even without WiFi or mobile data.`
+    };
+    if (faqContent) faqContent.textContent = texts[lang] || texts["es"];
+    if (document.getElementById("faq-title")) document.getElementById("faq-title").textContent = (lang === "ca") ? "Preguntes freqüents" : (lang === "en") ? "FAQ" : "Preguntas Frecuentes";
+  }
+
+  function updateTutorialText(lang) {
+    const texts = {
+      es: `1. Escribe tu destino o pulsa "Obtener" para usar tu ubicación actual.\n\n2. Selecciona la hora a la que debes regresar.\n\n3. Agrega un contacto de emergencia.\n\n4. Pulsa "Guardar y Activar Alerta".\n\n5. Confirma que estás bien antes de la hora programada.`,
+      ca: `1. Escriu el destí o prem "Obtenir" per usar la teva ubicació actual.\n\n2. Selecciona l'hora a la qual has de tornar.\n\n3. Afegeix un contacte d'emergència.\n\n4. Prem "Guardar i Activar Alerta".\n\n5. Confirma que estàs bé abans de l'hora programada.`,
+      en: `1. Type your destination or tap "Get" to use your current location.\n\n2. Select the time you should be back by.\n\n3. Add an emergency contact.\n\n4. Tap "Save and Activate Alert".\n\n5. Confirm you're safe before the scheduled time.`
+    };
+    if (tutorialContent) tutorialContent.textContent = texts[lang] || texts["en"];
+    if (document.getElementById("tutorial-title")) document.getElementById("tutorial-title").textContent = (lang === "ca")
+      ? "Com Usar TrustLoop"
+      : (lang === "en")
+        ? "How to Use TrustLoop"
+        : "Cómo Usar TrustLoop";
+  }
+
+  // --- EVENTOS DE LOS BOTONES ---
+
+  // Botón "Obtener Ubicación"
+  if (getLocationBtn) {
+    getLocationBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("La geolocalización no está disponible.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          destinationInput.value = `Latitud: ${lat}, Longitud: ${lng}`;
+          alert(`Ubicación obtenida: ${destinationInput.value}`);
+        },
+        (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              alert("Permiso denegado. Por favor, acepta acceso a la ubicación.");
+              break;
+            default:
+              alert("Error al obtener la ubicación.");
+          }
+        }
+      );
+    });
+  }
+
+  // Guardar plan con 1 contacto
+  if (savePlanBtn) {
+    savePlanBtn.addEventListener("click", () => {
+      const destination = destinationInput?.value.trim();
+      const returnTime = document.getElementById("returnTimeInput")?.value.trim();
+      const contactName = document.getElementById("contactName1")?.value.trim();
+      const contactPhone = document.getElementById("contactPhone1")?.value.trim();
+
+      if (!destination || !returnTime || !contactName || !contactPhone) {
+        alert("Por favor, completa todos los campos.");
+        return;
+      }
+
+      const contact = { name: contactName, phone: contactPhone };
+      localStorage.setItem("plan", JSON.stringify({ destination, returnTime, contact }));
+      addedContactsList.innerHTML = `<ul><li>${contact.name} - ${contact.phone}</li></ul>`;
+      alert("Plan guardado correctamente.");
+
+      scheduleSafeCheck(returnTime, contact);
+    });
+  }
+
+  function scheduleSafeCheck(returnTime, contact) {
+    const now = new Date();
+    const returnTimestamp = new Date(returnTime).getTime();
+
+    clearTimeout(safeCheckTimeout);
+    if (returnTimestamp <= now.getTime()) {
+      alert("La hora debe ser posterior a la actual.");
+      return;
+    }
+
+    safeCheckTimeout = setTimeout(() => {
+      triggerAutomaticAlert(contact);
+    }, returnTimestamp - now.getTime());
+
+    alert(`SafeCheck programado para las ${returnTime}.`);
+  }
+
+  function triggerAutomaticAlert(contact) {
+    alert("¡Se ha activado una alerta automática!");
+    console.log(`Enviando mensaje a ${contact.name} (${contact.phone})`);
+  }
+
+  // Confirmar "Estoy Bien"
+  if (imOkBtn) {
+    imOkBtn.addEventListener("click", () => {
+      clearTimeout(safeCheckTimeout);
+      alert("Has confirmado que estás bien. SafeCheck cancelado.");
+
+      // Limpiar formulario
+      destinationInput.value = "";
+      document.getElementById("returnTimeInput").value = "";
+      document.getElementById("contactName1").value = "";
+      document.getElementById("contactPhone1").value = "";
+      addedContactsList.innerHTML = "";
+    });
+  }
+
+  // Botón de pánico → Envío por SMS
+  panicBtn.addEventListener("click", () => {
+    const contact = JSON.parse(localStorage.getItem("plan"))?.contact;
+    if (!contact) {
+      alert("Guarda un contacto antes de usar el botón de pánico.");
+      return;
+    }
+    sendSMSAlert(contact);
+  });
+
+  function sendSMSAlert(contact) {
+    const plan = JSON.parse(localStorage.getItem("plan"));
+    const message = `⚠️ ¡ALERTA DE SEGURIDAD!\n\nUsuario en peligro.\nUbicación: ${plan.destination}`;
+    window.location.href = `sms:${contact.phone}?body=${encodeURIComponent(message)}`;
+    alert(`Preparando mensaje de emergencia para ${contact.name} (${contact.phone}).\nPulsa "Enviar" desde tu app de mensajes.`);
+  }
+
+  // Menú principal
+  menuBtn.addEventListener("click", () => {
+    menuModal.classList.add("active");
+    menuModal.setAttribute("aria-hidden", "false");
+  });
+
+  // Cerrar modales genéricos
+  document.querySelectorAll(".close-modal").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const modal = btn.closest(".modal-overlay");
+      modal.classList.remove("active");
+      modal.setAttribute("aria-hidden", "true");
+    });
+  });
+
+  // Abrir FAQ desde footer
+  footerFaqBtn.addEventListener("click", () => {
+    const lang = localStorage.getItem("language") || "es";
+    updateFaqText(lang);
+    faqModal.classList.add("active");
+    faqModal.setAttribute("aria-hidden", "false");
+  });
+
+  // Abrir Tutorial desde menú
+  tutorialBtn.addEventListener("click", () => {
+    const lang = localStorage.getItem("language") || "es";
+    updateTutorialText(lang);
+    menuModal.classList.remove("active");
+    tutorialModal.classList.add("active");
+    tutorialModal.setAttribute("aria-hidden", "false");
+  });
+
+  // Configuración - abrir selector de idioma
+  configBtn.addEventListener("click", () => {
+    menuModal.classList.remove("active");
+    languageModal.classList.add("active");
+    languageModal.setAttribute("aria-hidden", "false");
+  });
+
+  // Seleccionar idioma
+  document.querySelectorAll(".language-option").forEach(option => {
+    option.addEventListener("click", () => {
+      const selectedLang = option.getAttribute("data-lang");
+      localStorage.setItem("language", selectedLang);
+      applyLanguage(selectedLang);
+      alert(`Idioma cambiado a ${option.textContent}`);
+    });
+  });
+
+  // Aplicar idioma inicial
+  applyLanguage(savedLanguage);
+
+})();
+</script>
+</body>
+</html>
